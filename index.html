@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="超声诊断助手">
+<title>肌肉骨骼超声 · 诊断助手</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f4f8; color:#222; min-height:100vh; }
+.header { background:linear-gradient(135deg,#1a5276,#2980b9); color:#fff; padding:16px 20px; text-align:center; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.header h1 { font-size:1.2em; font-weight:600; }
+.header p { font-size:.75em; opacity:.85; margin-top:4px; }
+.search-box { padding:12px 16px; background:#fff; border-bottom:1px solid #e0e0e0; position:sticky; top:72px; z-index:99; }
+.search-box input { width:100%; padding:12px 16px; border:2px solid #e0e0e0; border-radius:12px; font-size:1em; outline:none; transition:border .2s; }
+.search-box input:focus { border-color:#2980b9; }
+.tags { padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px; }
+.tag { padding:6px 14px; border-radius:20px; font-size:.8em; cursor:pointer; border:1px solid #ccc; background:#fff; transition:all .2s; }
+.tag.active { background:#2980b9; color:#fff; border-color:#2980b9; }
+.tag.肌肉 { border-color:#e74c3c; color:#e74c3c; }
+.tag.肌肉.active { background:#e74c3c; color:#fff; border-color:#e74c3c; }
+.tag.肌腱 { border-color:#27ae60; color:#27ae60; }
+.tag.肌腱.active { background:#27ae60; color:#fff; border-color:#27ae60; }
+.results { padding:16px; }
+.card { background:#fff; border-radius:12px; padding:16px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.06); border-left:4px solid #2980b9; }
+.card.肌肉 { border-left-color:#e74c3c; }
+.card.肌腱 { border-left-color:#27ae60; }
+.card h3 { font-size:1em; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+.card .badge { font-size:.65em; padding:2px 8px; border-radius:10px; color:#fff; }
+.badge.肌肉 { background:#e74c3c; }
+.badge.肌腱 { background:#27ae60; }
+.badge.急症 { background:#e74c3c; }
+.card .section { margin-top:8px; }
+.card .section-title { font-size:.8em; font-weight:700; color:#555; margin-bottom:3px; }
+.card .section-content { font-size:.85em; line-height:1.6; color:#444; }
+.highlight { background:#fff3cd; padding:1px 3px; border-radius:3px; }
+.no-result { text-align:center; padding:40px; color:#999; }
+.no-result .icon { font-size:3em; margin-bottom:10px; }
+.count { font-size:.8em; color:#888; padding:0 16px; }
+.footer { text-align:center; padding:20px; color:#aaa; font-size:.75em; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🩻 肌肉骨骼超声 · 诊断助手</h1>
+  <p>输入症状或超声表现 → 智能匹配可能诊断</p>
+</div>
+
+<div class="search-box">
+  <input type="text" id="searchInput" placeholder="例如：肌肉拉伤、低回声区、肌腱增厚、回声增强、血流增多…" autofocus>
+</div>
+
+<div class="tags" id="tagFilters">
+  <span class="tag active" data-cat="all">全部</span>
+  <span class="tag 肌肉" data-cat="肌肉">🦴 肌肉</span>
+  <span class="tag 肌腱" data-cat="肌腱">💪 肌腱</span>
+  <span class="tag" data-cat="急症">🚨 急症</span>
+</div>
+
+<div class="count" id="resultCount"></div>
+<div class="results" id="results"></div>
+<div class="footer">基于《肌肉骨骼系统超声医学》第3章 · 仅供学习参考</div>
+
+<script>
+// ========== 诊断知识库 ==========
+const knowledgeBase = [
+  {
+    id: 1, cat: "肌肉", subcat: "创伤", urgency: "常规",
+    name: "肌肉拉伤（1级 / Peetrons 1级）",
+    symptoms: "局部疼痛、轻微肿胀、运动时加重",
+    usFindings: "肌肉内边界不清晰的高回声或低回声区、细微改变、无明确撕裂面",
+    differential: "肌肉挫伤、DOMS（延迟性肌肉酸痛）",
+    key: "超声表现可能非常轻微，必须在静息+收缩双状态下对比扫查",
+    severity: "轻度"
+  },
+  {
+    id: 2, cat: "肌肉", subcat: "创伤", urgency: "常规",
+    name: "肌肉部分撕裂（2级 / Peetrons 2级）",
+    symptoms: "明确疼痛、局部肿胀、淤血、活动受限",
+    usFindings: "肌纤维连续性部分中断、局部低回声/无回声区（积液）、纤维脂肪隔断裂",
+    differential: "完全撕裂（需鉴别撕裂程度）、肌肉内血肿",
+    key: "短轴断面测量撕裂面积占截面积的比例是决定治疗方案的关键",
+    severity: "中度"
+  },
+  {
+    id: 3, cat: "肌肉", subcat: "创伤", urgency: "急症",
+    name: "肌肉完全撕裂（3级 / Peetrons 3级）",
+    symptoms: "剧痛、功能丧失、可触及凹陷、大片淤血",
+    usFindings: "肌肉完全断裂、断端回缩、断端间血肿填充、动态扫查断端分离增大",
+    differential: "部分撕裂（程度鉴别）、肌腱撕脱",
+    key: "完全断裂需手术修复，超声需测量断端回缩距离",
+    severity: "重度"
+  },
+  {
+    id: 4, cat: "肌肉", subcat: "创伤", urgency: "常规",
+    name: "肌肉内血肿",
+    symptoms: "外伤后肿胀、疼痛、局部硬结",
+    usFindings: "急性期(0-24h)：高回声/等回声；亚急性期(1-2天)：回声逐渐减低、液化；慢性期：吸收或机化",
+    differential: "肌肉脓肿、肿瘤内出血",
+    key: "伤后1-2天复查超声更易显示积液范围",
+    severity: "中轻度"
+  },
+  {
+    id: 5, cat: "肌肉", subcat: "创伤", urgency: "常规",
+    name: "骨化性肌炎",
+    symptoms: "大块肌肉（大腿/上臂）外伤后数周出现硬块、疼痛",
+    usFindings: "早期：非特异性低回声肿物；中期：周边钙化（高回声环）；成熟期：蛋壳样钙化+后方声影",
+    differential: "骨肉瘤（恶性）、骨旁骨肉瘤",
+    key: "\"肌炎\"用词不当——这不是炎症。成熟期的蛋壳样钙化是特征性表现",
+    severity: "中度"
+  },
+  {
+    id: 6, cat: "肌肉", subcat: "创伤", urgency: "急症",
+    name: "筋膜间隙综合征",
+    symptoms: "严重疼痛（超出伤情）、被动牵拉痛、感觉异常、脉搏减弱（晚期）",
+    usFindings: "肌肉体积增大、回声改变、筋膜内压力增高",
+    differential: "深静脉血栓、严重肌肉挫伤",
+    key: "急症！需立即减压。超声可快速评估受累肌肉范围",
+    severity: "危重"
+  },
+  {
+    id: 7, cat: "肌肉", subcat: "创伤", urgency: "常规",
+    name: "肌疝",
+    symptoms: "肌肉收缩时局部隆起、可伴疼痛",
+    usFindings: "筋膜缺损、肌肉经缺损处凸出、动态检查（蹲坐位）可诱发",
+    differential: "肌肉肿瘤",
+    key: "探头过度加压可致疝复位→漏诊！应用大量耦合剂轻触+蹲坐位诱发",
+    severity: "轻度"
+  },
+  {
+    id: 8, cat: "肌肉", subcat: "炎症", urgency: "常规",
+    name: "肌炎（特发性/感染性）",
+    symptoms: "肌肉疼痛、肿胀、无力、可伴发热",
+    usFindings: "肌肉增厚、回声减低、彩色多普勒：血流增多",
+    differential: "蜂窝织炎（皮下组织受累）、横纹肌溶解症",
+    key: "彩色多普勒血流增多=活动性炎症",
+    severity: "中度"
+  },
+  {
+    id: 9, cat: "肌肉", subcat: "炎症", urgency: "常规",
+    name: "多发性肌炎 / 皮肌炎",
+    symptoms: "对称性近端肌无力、肌痛、皮疹（皮肌炎）",
+    usFindings: "界限模糊的低回声区、纤维脂肪隔消失、皮下组织正常",
+    differential: "神经肌肉病（Duchenne/Becker）、药物性肌病",
+    key: "MR是目前诊断首选（T2/STIR），超声+多普勒评估血管分布",
+    severity: "中度"
+  },
+  {
+    id: 10, cat: "肌肉", subcat: "炎症", urgency: "急症",
+    name: "化脓性肌炎 / 肌肉脓肿",
+    symptoms: "红、肿、热、痛、发热、白细胞升高",
+    usFindings: "肌肉内液性积聚、后方回声增强、偶见气体回声（产气菌）、多普勒：周边充血环",
+    differential: "血肿（不同时期回声不同）、肿瘤坏死",
+    key: "气体回声=产气微生物感染；不可压缩性有助于与血肿鉴别",
+    severity: "重度"
+  },
+  {
+    id: 11, cat: "肌肉", subcat: "炎症", urgency: "常规",
+    name: "横纹肌溶解症",
+    symptoms: "肌肉剧痛、无力、深色尿（肌红蛋白尿）、CK显著升高",
+    usFindings: "肌肉肿胀、结构紊乱、回声不均匀",
+    differential: "肌炎、深静脉血栓",
+    key: "超声表现非特异性，需结合实验室CK检测",
+    severity: "重度"
+  },
+  {
+    id: 12, cat: "肌肉", subcat: "肿瘤", urgency: "常规",
+    name: "肌肉内血管瘤",
+    symptoms: "慢性肿物、可能疼痛、可随体位改变大小",
+    usFindings: "混合回声（不均匀）、多种成分（脂肪+血管+残存肌肉）、彩色多普勒：丰富血流、反应性脂肪增生",
+    differential: "脂肪瘤、血管畸形",
+    key: "反应性脂肪过度增生=特征性表现",
+    severity: "中轻度"
+  },
+  {
+    id: 13, cat: "肌肉", subcat: "肿瘤", urgency: "常规",
+    name: "肌肉内脂肪瘤",
+    symptoms: "无痛性、生长缓慢的软性肿物",
+    usFindings: "高回声（纹理状类型）、边界清晰（薄低回声包膜）、不可压缩",
+    differential: "高分化脂肪肉瘤（恶性）、脂肪过多症",
+    key: "不可压缩性是超声鉴别脂肪瘤和脓肿的关键之一",
+    severity: "轻度"
+  },
+  {
+    id: 14, cat: "肌肉", subcat: "肿瘤", urgency: "常规",
+    name: "高分化脂肪肉瘤",
+    symptoms: "无痛性/轻痛、生长缓慢但持续增大、深部软组织好发",
+    usFindings: "不均匀高回声、厚隔、结节性非脂肪区、部分边界不清",
+    differential: "脂肪瘤（良性，无厚隔和结节）、未分化脂肪肉瘤",
+    key: "厚隔+结节性非脂肪区=恶性征象",
+    severity: "重度"
+  },
+  {
+    id: 15, cat: "肌肉", subcat: "肿瘤", urgency: "常规",
+    name: "硬纤维瘤（侵袭性纤维瘤病）",
+    symptoms: "坚实、固定肿物、好发25-40岁、30岁以下更具侵袭性",
+    usFindings: "低回声、侵袭性边界、起源于筋膜/腱膜",
+    differential: "纤维肉瘤、瘢痕组织",
+    key: "10%-15%为多灶性；超声用于引导穿刺确诊",
+    severity: "中度"
+  },
+  {
+    id: 16, cat: "肌肉", subcat: "变异", urgency: "常规",
+    name: "副肌肉 / 肌肉变异",
+    symptoms: "局部隆起、可因压迫神经产生症状（如跗管综合征）、运动时疼痛",
+    usFindings: "边界清晰的长条结构、具有正常肌肉声像图、动态检查显示正常收缩",
+    differential: "软组织肿瘤",
+    key: "动态超声（收缩证实肌肉性质）+双侧对比扫查可确诊",
+    severity: "轻度"
+  },
+  {
+    id: 17, cat: "肌肉", subcat: "变异", urgency: "常规",
+    name: "Duchenne / Becker 肌营养不良",
+    symptoms: "进行性肌无力、步态异常（鸭步）、Gower征、小腿假性肥大",
+    usFindings: "四联征：回声增强+不均匀+后方声衰减+纤维脂肪隔边界模糊",
+    differential: "多发性肌炎、脊肌萎缩症",
+    key: "超声四联征+双侧对比+肌肉厚度/脂肪厚度比率测量",
+    severity: "重度"
+  },
+  {
+    id: 18, cat: "肌腱", subcat: "炎症", urgency: "常规",
+    name: "肌腱炎",
+    symptoms: "肌腱走行区疼痛、活动加重、局部压痛",
+    usFindings: "肌腱增厚、回声减低、彩色多普勒：血流增多 🔴",
+    differential: "肌腱退行性变（关键鉴别！）、腱鞘炎",
+    key: "彩色多普勒是唯一可靠的鉴别方法：肌腱炎血流↑ vs 退行性变血流→",
+    severity: "中轻度"
+  },
+  {
+    id: 19, cat: "肌腱", subcat: "退变", urgency: "常规",
+    name: "肌腱退行性变（Tendinosis）",
+    symptoms: "慢性疼痛、僵硬、活动后减轻（热身现象）",
+    usFindings: "肌腱增厚、回声减低、胶原纤维结构模糊、彩色多普勒：无/极少血流 🔵",
+    differential: "肌腱炎（关键鉴别！）、部分撕裂",
+    key: "退行性变≠炎症！不需要抗炎治疗，应做康复训练。彩色多普勒不充血",
+    severity: "中轻度"
+  },
+  {
+    id: 20, cat: "肌腱", subcat: "撕裂", urgency: "急症",
+    name: "肌腱完全撕裂",
+    symptoms: "突发剧痛、功能丧失（如不能提踵=跟腱撕裂）、可触及凹陷",
+    usFindings: "肌腱连续性完全中断、断端回缩、断端间血肿/积液填充",
+    differential: "部分撕裂（程度鉴别）",
+    key: "完全撕裂需手术。超声需测量断端回缩距离决定手术方案",
+    severity: "重度"
+  },
+  {
+    id: 21, cat: "肌腱", subcat: "撕裂", urgency: "常规",
+    name: "肌腱部分撕裂",
+    symptoms: "疼痛、力量减弱但未完全丧失",
+    usFindings: "肌腱内裂隙（低/无回声）、短轴测量撕裂截面积<100%",
+    differential: "肌腱退行性变、肌腱炎",
+    key: "短轴断面精确测量撕裂面积占比：<25%保守、25-50%可保守、>50%手术",
+    severity: "中度"
+  },
+  {
+    id: 22, cat: "肌腱", subcat: "不稳定", urgency: "常规",
+    name: "肌腱脱位 / 半脱位",
+    symptoms: "关节活动时弹响/弹跳感、疼痛、可伴不稳感",
+    usFindings: "肌腱偏离正常骨纤维管道、支持带/滑车损伤、动态超声可记录脱位过程",
+    differential: "肌腱撕裂、关节内游离体",
+    key: "静态扫查可能完全正常！必须在动态下诱发脱位。让患者做特定动作",
+    severity: "中度"
+  },
+  {
+    id: 23, cat: "肌腱", subcat: "炎症", urgency: "常规",
+    name: "腱鞘炎（浆液性）",
+    symptoms: "肌腱沿线疼痛、肿胀、活动时摩擦感",
+    usFindings: "无回声腱鞘积液环绕肌腱（\"靶征\"）、腱鞘滑膜增厚、彩色多普勒：滑膜充血",
+    differential: "化脓性腱鞘炎、肌腱退行性变",
+    key: "积液使腱鞘边界清晰显示",
+    severity: "中轻度"
+  },
+  {
+    id: 24, cat: "肌腱", subcat: "炎症", urgency: "急症",
+    name: "化脓性腱鞘炎",
+    symptoms: "红、肿、剧痛、发热、手指半屈位、被动伸直剧痛",
+    usFindings: "浑浊积液+碎屑回声、腱鞘高度充血增厚",
+    differential: "浆液性腱鞘炎、蜂窝织炎",
+    key: "急症！需紧急手术引流，延误可致肌腱坏死",
+    severity: "危重"
+  },
+  {
+    id: 25, cat: "肌腱", subcat: "肿瘤", urgency: "常规",
+    name: "腱鞘囊肿",
+    symptoms: "无痛性囊性隆起、可随关节活动变化、偶有压迫症状",
+    usFindings: "无回声囊性结构、紧邻肌腱或关节、彩色多普勒：无血流、可单房或多房",
+    differential: "腱鞘巨细胞瘤（有血流）、滑膜肉瘤",
+    key: "无血流=腱鞘囊肿；有血流=考虑其他",
+    severity: "轻度"
+  },
+  {
+    id: 26, cat: "肌腱", subcat: "肿瘤", urgency: "常规",
+    name: "腱鞘巨细胞瘤",
+    symptoms: "缓慢增大的坚实结节、紧贴肌腱",
+    usFindings: "低回声结节紧贴肌腱、边界清晰或分叶、彩色多普勒：中度血流",
+    differential: "腱鞘囊肿（无血流）、PVNS（弥漫型）",
+    key: "可侵蚀邻近骨骼；超声引导穿刺确诊",
+    severity: "中度"
+  },
+  {
+    id: 27, cat: "肌肉", subcat: "炎症", urgency: "常规",
+    name: "增生性肌炎",
+    symptoms: "儿童面部/颞部软组织严重肿胀",
+    usFindings: "\"干泥浆\"样类型：高回声纤维束被低回声线随机分开",
+    differential: "肿瘤、感染",
+    key: "特征性的\"干泥浆\"超声表现",
+    severity: "中度"
+  },
+  {
+    id: 28, cat: "肌肉", subcat: "肿瘤", urgency: "常规",
+    name: "横纹肌肉瘤",
+    symptoms: "快速增大的肌肉内肿物、儿童/青少年好发",
+    usFindings: "不均匀回声、侵袭性边界、坏死区、彩色多普勒：丰富血流",
+    differential: "其他肉瘤、淋巴瘤",
+    key: "超声成像特征缺乏特异性，需引导穿刺活检确诊",
+    severity: "重度"
+  }
+];
+
+// ========== 搜索与渲染 ==========
+let activeCat = "all";
+
+function search(query) {
+  query = query.toLowerCase().trim();
+  let results = knowledgeBase;
+
+  // Category filter
+  if (activeCat !== "all") {
+    results = results.filter(item => item.urgency === activeCat || item.cat === activeCat);
+  }
+
+  // Text search
+  if (query) {
+    const keywords = query.split(/\s+/);
+    results = results.filter(item => {
+      const searchText = [
+        item.name, item.symptoms, item.usFindings,
+        item.differential, item.key, item.subcat, item.severity
+      ].join(" ").toLowerCase();
+      return keywords.every(kw => searchText.includes(kw));
+    });
+  }
+
+  // Sort: urgency first, then by relevance
+  const urgencyOrder = { "危重":0, "重度":1, "中度":2, "中轻度":3, "轻度":4 };
+  results.sort((a,b) => (urgencyOrder[a.urgency]||5) - (urgencyOrder[b.urgency]||5));
+
+  return results;
+}
+
+function renderResults(results) {
+  const container = document.getElementById("results");
+  const countEl = document.getElementById("resultCount");
+
+  countEl.textContent = `找到 ${results.length} 个匹配诊断`;
+
+  if (results.length === 0) {
+    container.innerHTML = `
+      <div class="no-result">
+        <div class="icon">🔍</div>
+        <p>未找到匹配的诊断</p>
+        <p style="font-size:.85em;margin-top:8px;">试试：低回声、血流增多、撕裂、积液、钙化…</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = results.map(r => `
+    <div class="card ${r.cat}">
+      <h3>
+        ${r.name}
+        <span class="badge ${r.cat}">${r.cat}</span>
+        ${r.urgency === '急症' || r.urgency === '危重' ? `<span class="badge 急症">🚨${r.urgency}</span>` : ''}
+      </h3>
+      <div class="section">
+        <div class="section-title">🩺 临床表现</div>
+        <div class="section-content">${highlightMatches(r.symptoms)}</div>
+      </div>
+      <div class="section">
+        <div class="section-title">🔬 超声表现</div>
+        <div class="section-content">${highlightMatches(r.usFindings)}</div>
+      </div>
+      <div class="section">
+        <div class="section-title">🔄 鉴别诊断</div>
+        <div class="section-content">${r.differential}</div>
+      </div>
+      <div class="section">
+        <div class="section-title">🔑 关键提示</div>
+        <div class="section-content">${highlightMatches(r.key)}</div>
+      </div>
+      <div style="margin-top:6px;font-size:.7em;color:#999;">严重程度：${r.severity} | 分类：${r.subcat}</div>
+    </div>
+  `).join("");
+}
+
+function highlightMatches(text) {
+  const query = document.getElementById("searchInput").value.trim();
+  if (!query) return text;
+  const keywords = query.split(/\s+/);
+  let result = text;
+  keywords.forEach(kw => {
+    const regex = new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    result = result.replace(regex, '<span class="highlight">$1</span>');
+  });
+  return result;
+}
+
+// ========== Event Listeners ==========
+document.getElementById("searchInput").addEventListener("input", function() {
+  renderResults(search(this.value));
+});
+
+document.getElementById("tagFilters").addEventListener("click", function(e) {
+  if (e.target.classList.contains("tag")) {
+    document.querySelectorAll(".tag").forEach(t => t.classList.remove("active"));
+    e.target.classList.add("active");
+    activeCat = e.target.dataset.cat;
+    renderResults(search(document.getElementById("searchInput").value));
+  }
+});
+
+// ========== Init ==========
+renderResults(search(""));
+
+// Keyboard shortcut: / to focus search
+document.addEventListener("keydown", function(e) {
+  if (e.key === "/" && document.activeElement !== document.getElementById("searchInput")) {
+    e.preventDefault();
+    document.getElementById("searchInput").focus();
+  }
+});
+</script>
+</body>
+</html>
