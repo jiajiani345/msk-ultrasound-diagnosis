@@ -1,0 +1,15 @@
+{
+  "name": "肌肉骨骼超声 · 诊断助手",
+  "short_name": "超声诊断",
+  "start_url": "/msk-ultrasound-diagnosis/",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#1a5276",
+  "description": "输入症状或超声表现，智能匹配可能诊断",
+  "icons": [{
+    "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩻</text></svg>",
+    "sizes": "100x100",
+    "type": "image/svg+xml"
+  }],
+  "lang": "zh-CN"
+}
