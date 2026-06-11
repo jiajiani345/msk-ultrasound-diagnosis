@@ -23,6 +23,8 @@ body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; bac
 .tag.肌肉.active { background:#e74c3c; color:#fff; border-color:#e74c3c; }
 .tag.肌腱 { border-color:#27ae60; color:#27ae60; }
 .tag.肌腱.active { background:#27ae60; color:#fff; border-color:#27ae60; }
+.tag.腕关节 { border-color:#f39c12; color:#f39c12; }
+.tag.腕关节.active { background:#f39c12; color:#fff; border-color:#f39c12; }
 .results { padding:16px; }
 .card { background:#fff; border-radius:12px; padding:16px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.06); border-left:4px solid #2980b9; }
 .card.肌肉 { border-left-color:#e74c3c; }
@@ -57,6 +59,7 @@ body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; bac
   <span class="tag active" data-cat="all">全部</span>
   <span class="tag 肌肉" data-cat="肌肉">🦴 肌肉</span>
   <span class="tag 肌腱" data-cat="肌腱">💪 肌腱</span>
+  <span class="tag 腕关节" data-cat="腕关节">🤚 腕关节</span>
   <span class="tag" data-cat="急症">🚨 急症</span>
 </div>
 
@@ -318,6 +321,70 @@ const knowledgeBase = [
     differential: "其他肉瘤、淋巴瘤",
     key: "超声成像特征缺乏特异性，需引导穿刺活检确诊",
     severity: "重度"
+  },
+  // ===== 第10章：腕关节 =====
+  {
+    id: 30, cat: "腕关节", subcat: "神经卡压", urgency: "常规",
+    name: "腕管综合征（CTS）",
+    symptoms: "拇指、示指、中指麻木疼痛（夜间加重）、鱼际肌萎缩（晚期）",
+    usFindings: "正中神经增粗（入口处截面积>10mm²）、神经变扁、屈肌支持带向掌侧隆起、正中神经回声减低",
+    differential: "颈椎病、旋前圆肌综合征、胸廓出口综合征",
+    key: "腕管入口截面积>10mm²=诊断阈值。彩色多普勒显示神经内血流增多=重度",
+    severity: "中度"
+  },
+  {
+    id: 31, cat: "腕关节", subcat: "腱鞘炎", urgency: "常规",
+    name: "De Quervain 狭窄性腱鞘炎",
+    symptoms: "桡骨茎突处疼痛、拇指活动加重、Finkelstein试验阳性",
+    usFindings: "第1伸肌间室（拇长展肌+拇短伸肌）肌腱增厚、腱鞘积液、多普勒血流增多",
+    differential: "舟骨骨折、腕关节炎",
+    key: "第1伸肌间室短轴扫查，双侧对比更有助于诊断",
+    severity: "中轻度"
+  },
+  {
+    id: 32, cat: "腕关节", subcat: "韧带损伤", urgency: "常规",
+    name: "三角纤维软骨复合体（TFCC）撕裂",
+    symptoms: "尺侧腕痛、旋转前臂加重、握力减弱、可能有弹响",
+    usFindings: "TFCC正常高回声三角形消失、低回声裂隙、边缘不规则、积液",
+    differential: "尺骨茎突骨折、月三角韧带损伤",
+    key: "动态超声（尺骨偏斜位观察）。超声无法完全替代MR对TFCC的评估",
+    severity: "中度"
+  },
+  {
+    id: 33, cat: "腕关节", subcat: "囊肿", urgency: "常规",
+    name: "腕部腱鞘囊肿",
+    symptoms: "腕背侧无痛性隆起（最常见舟月韧带附近）、可随活动变化大小",
+    usFindings: "无回声囊性结构、可多房、蒂部连向关节腔、彩色多普勒无血流",
+    differential: "腱鞘巨细胞瘤（有血流）、脂肪瘤",
+    key: "无血流=腱鞘囊肿，有血流=考虑腱鞘巨细胞瘤",
+    severity: "轻度"
+  },
+  {
+    id: 34, cat: "腕关节", subcat: "关节炎", urgency: "常规",
+    name: "类风湿关节炎（腕部）",
+    symptoms: "双侧对称性腕关节肿痛、晨僵>30分钟、可伴全身症状",
+    usFindings: "滑膜增生（低回声）、多普勒血流增多（活动性炎症）、骨质侵蚀（皮质不规整）、关节积液",
+    differential: "骨关节炎、痛风性关节炎、感染性关节炎",
+    key: "多普勒血流增多=活动性滑膜炎。超声可早期发现骨质侵蚀（X线可能阴性）",
+    severity: "中度"
+  },
+  {
+    id: 35, cat: "腕关节", subcat: "关节炎", urgency: "常规",
+    name: "痛风性腕关节炎",
+    symptoms: "急性单关节红肿剧痛、常夜间发作、血尿酸升高",
+    usFindings: "\"双轨征\"（尿酸结晶沉积透明软骨表面）、痛风石（高回声伴声影）、滑膜增生+多普勒血流增多",
+    differential: "类风湿关节炎、感染性关节炎、焦磷酸钙沉积病",
+    key: "\"双轨征\"是痛风特征性超声表现，灵敏度高于X线",
+    severity: "中度"
+  },
+  {
+    id: 36, cat: "腕关节", subcat: "韧带损伤", urgency: "常规",
+    name: "舟月韧带撕裂",
+    symptoms: "腕背侧疼痛、握拳时加重、可能有\"咔嗒\"声",
+    usFindings: "舟月韧带连续性中断、舟月间隙增宽>2mm、动态扫查（握拳位）间隙进一步增宽",
+    differential: "TFCC撕裂、舟骨骨折、月骨坏死",
+    key: "腕部最常见的韧带损伤。动态扫查（握拳诱发）是关键",
+    severity: "中度"
   }
 ];
 
